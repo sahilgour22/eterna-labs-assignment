@@ -8,6 +8,7 @@ import { setSortConfig, setSelectedToken } from "@/store/tokensSlice";
 import { TokenRow } from "@/components/token-row";
 import { TokenTableSkeleton } from "@/components/token-table-skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { Pagination } from "@/components/ui/pagination";
 import { Token, SortField } from "@/lib/types";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -79,10 +80,27 @@ export function TokenTradingTable() {
     "all" | "new-pairs" | "final-stretch" | "migrated"
   >("all");
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 10;
+
   const filteredTokens = useMemo(() => {
     if (selectedCategory === "all") return sortedTokens;
     return sortedTokens.filter((t) => t.category === selectedCategory);
   }, [sortedTokens, selectedCategory]);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, sortConfig]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredTokens.length / itemsPerPage);
+  const paginatedTokens = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredTokens.slice(startIndex, endIndex);
+  }, [filteredTokens, currentPage, itemsPerPage]);
 
   const handleSort = useCallback(
     (field: SortField) => {
@@ -225,7 +243,7 @@ export function TokenTradingTable() {
                     </td>
                   </tr>
                 ) : (
-                  filteredTokens.map((token) => (
+                  paginatedTokens.map((token) => (
                     <TokenRow
                       key={token.id}
                       token={token}
@@ -238,10 +256,18 @@ export function TokenTradingTable() {
           )}
         </div>
 
-        {/* Results count */}
-        <div className="mt-4 text-sm text-gray-400">
-          Showing {filteredTokens.length} of {displayTokens.length} tokens
-        </div>
+        {/* Pagination */}
+        {!isLoading && filteredTokens.length > 0 && (
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={filteredTokens.length}
+            />
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );
